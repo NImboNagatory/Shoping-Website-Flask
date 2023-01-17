@@ -43,13 +43,6 @@ gravatar = Gravatar(app,
 login_manager.init_app(app)
 
 
-app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=600
-)
-
 
 app.config['RECAPTCHA_USE_SSL'] = False
 app.config['RECAPTCHA_PUBLIC_KEY'] = 'public'
@@ -282,7 +275,21 @@ def apply_caching(response):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     response.headers['Content-Security-Policy'] = "default-src 'self'"
+    response.headers['Content-Security-Policy'] = "img-src 'self'"
+    response.headers['Content-Security-Policy'] = "script-src 'self'"
+    response.headers['Content-Security-Policy'] = "style-src 'self'"
+    response.headers['Content-Security-Policy'] = "connect-src 'self'"
+    response.headers['Content-Security-Policy'] = "object-src 'self'"
+    response.headers['Content-Security-Policy'] = "frame-src 'self'"
+    response.headers['Content-Security-Policy'] = "child-src 'self'"
+    response.headers['Content-Security-Policy'] = "form-action 'self'"
+    response.headers['Content-Security-Policy'] = "frame-ancestors 'none'"
+    response.headers['Content-Security-Policy'] = "base-uri 'self'"
+    response.headers['Content-Security-Policy'] = "worker-src 'none'"
+    response.headers['Content-Security-Policy'] = "manifest-src 'none'"
+    response.headers['Content-Security-Policy'] = "prefetch-src 'none'"
     response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.set_cookie('snakes', '3', max_age=600)
     response.set_cookie('username', 'flask', secure=True, httponly=True, samesite='Lax')
     return response
 

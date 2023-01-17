@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>403</title>
+  <link rel="stylesheet" href="{{url_for('static', filename='css/403.css')}}">
+</head>
+<body>
+ <div class="container">
+  <div class="component PC"></div>
+  <div class="component connection">
+    <div class="dot first"></div>
+    <div class="dot second"></div>
+    <div class="dot third"></div>
+  </div>
+  <div class="component server">
+    <div class="slot"></div>
+    <div class="slot"></div>
+    <div class="button"></div>
+    <div class="button"></div>
+  </div>
+  <button class="redirect " onclick="connect()">go back to main site</button>
+</div>
+<script>function reconnect(){
+  setTimeout(function(){
+    document.querySelector('.first').classList.toggle('num-four');
+    document.querySelector('.second').classList.toggle('num-zero');
+    document.querySelector('.third').classList.toggle('num-three');
+    document.querySelector('.container').classList.toggle('_403');
+    document.querySelector('.redirect').classList.toggle('visible');
+  }, 1500);
+}
+
+
+
+window.addEventListener('load', reconnect);</script>
+</body>
+</html>

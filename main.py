@@ -150,6 +150,8 @@ def add_new_post():
         return login_manager.unauthorized()
     form = PostForm()
     if form.validate_on_submit():
+        upload_folder = 'seller_imgs'
+        allowed_extensions = {'png', 'jpg', 'jpeg'}
         new_post = Post(
             title=escape(form.title.data),
             subtitle=escape(form.subtitle.data),

@@ -1,11 +1,8 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, redirect, flash, url_for, request
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.ext.declarative import declarative_base
 from markupsafe import escape
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from random import choices
-from string import ascii_letters
 from flask_ckeditor import CKEditor
 from flask_bootstrap import Bootstrap
 from flask_gravatar import Gravatar
@@ -30,7 +27,6 @@ app.config['SECRET_KEY'] = "5d5fr8f2s2w8o4l5r1c4t8w8p5x5g48t56s"
 ckeditor = CKEditor(app)
 Bootstrap(app)
 
-
 gravatar = Gravatar(app,
                     size=100,
                     rating='g',
@@ -41,8 +37,6 @@ gravatar = Gravatar(app,
                     base_url=None)
 
 login_manager.init_app(app)
-
-
 
 app.config['RECAPTCHA_USE_SSL'] = False
 app.config['RECAPTCHA_PUBLIC_KEY'] = 'public'
@@ -103,21 +97,21 @@ def load_user(user_id):
 @app.route("/")
 def index():
     posts = Post.query.all()
-    admin = False
-    if current_user.get_id() == "1":
-        admin = True
-    return render_template("index.html", all_posts=posts, admin=admin)
+    return render_template("index.html", all_posts=posts)
 
 
 @app.route("/register", methods=["GET", "POST"])
 def register_user():
+    if current_user.is_authenticated:
+        return login_manager.unauthorized()
     form = RegisterForm()
     if form.validate_on_submit():
         check = User.query.filter_by(email=escape(form.email.data)).first()
         check2 = User.query.filter_by(name=escape(form.username.data)).first()
         if check is None and check2 is None:
             if escape(form.password.data) == escape(form.rep_password.data):
-                password_hash = generate_password_hash(escape(form.password.data), method='pbkdf2:sha256', salt_length=8)
+                password_hash = generate_password_hash(escape(form.password.data), method='pbkdf2:sha256',
+                                                       salt_length=8)
                 new_user = User(
                     email=escape(form.email.data),
                     password=password_hash,
@@ -136,6 +130,8 @@ def register_user():
 
 @app.route('/login', methods=["GET", "POST"])
 def login():
+    if current_user.is_authenticated:
+        return login_manager.unauthorized()
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=escape(form.email.data)).first()
@@ -154,7 +150,6 @@ def add_new_post():
         return login_manager.unauthorized()
     form = PostForm()
     if form.validate_on_submit():
-        print(form.img.data.name)
         new_post = Post(
             title=escape(form.title.data),
             subtitle=escape(form.subtitle.data),
@@ -174,9 +169,8 @@ def add_new_post():
 def edit_post(post_id):
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
-    if current_user.get_id() == "1":
-        post = Post.query.get(escape(post_id))
-
+    post = Post.query.get(escape(post_id))
+    if current_user.get_id() == post.author_id:
         edit_form = PostForm(
             title=post.title,
             subtitle=post.subtitle,
@@ -197,13 +191,22 @@ def edit_post(post_id):
         return redirect("/")
 
 
+@app.route("/my_page")
+@login_required
+def my_posts():
+    if not current_user.is_authenticated:
+        return login_manager.unauthorized()
+    query = db.session.execute(db.select(Post).filter_by(author_id=current_user.get_id())).scalars()
+    return render_template("my_posts.html", posts=query)
+
+
 @app.route("/delete/<int:post_id>")
 @login_required
 def delete_post(post_id):
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
-    if current_user.get_id() == "1":
-        post_to_delete = Post.query.get(escape(post_id))
+    post_to_delete = Post.query.get(escape(post_id))
+    if current_user.get_id() == post_to_delete.author_id:
         db.session.delete(post_to_delete)
         db.session.commit()
         return redirect('/')
@@ -233,12 +236,12 @@ def show_post(post_id):
             return redirect("/register")
 
     requested_post = Post.query.get(escape(post_id))
-    admin = False
+    author = False
     if requested_post is None:
-        return redirect("/")
-    if current_user.get_id() == "1":
-        admin = True
-    return render_template("post.html", post=requested_post, admin=admin, form=form, gravatar=gravatar)
+        return redirect("/404")
+    if current_user.get_id() == requested_post.author_id:
+        author = True
+    return render_template("post.html", post=requested_post, author=author, form=form, gravatar=gravatar)
 
 
 @app.route('/logout')
@@ -252,22 +255,22 @@ def logout():
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('404.html')
+    return render_template('404.html'), 404
 
 
 @app.errorhandler(403)
-def page_not_found(e):
-    return render_template('403.html')
+def forbidden(e):
+    return render_template('403.html'), 403
 
 
 @app.errorhandler(500)
-def page_not_found(e):
-    return render_template('500.html')
+def server_down(e):
+    return render_template('500.html'), 500
 
 
 @login_manager.unauthorized_handler
 def unauthorized():
-    return redirect('/')
+    return redirect("/")
 
 
 @app.after_request

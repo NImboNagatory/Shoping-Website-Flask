@@ -3,16 +3,30 @@ from flask import Flask, render_template, redirect, flash, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 from markupsafe import escape
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
+from flask_sessionstore import Session
+from flask_session_captcha import FlaskSessionCaptcha
 from flask_ckeditor import CKEditor
 from flask_bootstrap import Bootstrap
 from flask_gravatar import Gravatar
 from sqlalchemy.orm import relationship
 from forms import RegisterForm, PostForm, LoginForm, CommentForm
 from datetime import date
+from pymongo import MongoClient
 
 db = SQLAlchemy()
 
 app = Flask(__name__)
+
+mongoClient = MongoClient('localhost', 27017)
+app.config['CAPTCHA_ENABLE'] = True
+app.config['CAPTCHA_LENGTH'] = 5
+app.config['CAPTCHA_WIDTH'] = 160
+app.config['CAPTCHA_HEIGHT'] = 60
+app.config['SESSION_MONGODB'] = mongoClient
+app.config['SESSION_TYPE'] = 'mongodb'
+Session(app)
+captcha = FlaskSessionCaptcha(app)
+
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///shop.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -37,11 +51,6 @@ gravatar = Gravatar(app,
                     base_url=None)
 
 login_manager.init_app(app)
-
-app.config['RECAPTCHA_USE_SSL'] = False
-app.config['RECAPTCHA_PUBLIC_KEY'] = 'public'
-app.config['RECAPTCHA_PRIVATE_KEY'] = 'private'
-app.config['RECAPTCHA_OPTIONS'] = {'theme': 'white'}
 
 
 # CONFIGURE TABLES
@@ -150,14 +159,13 @@ def add_new_post():
         return login_manager.unauthorized()
     form = PostForm()
     if form.validate_on_submit():
-        upload_folder = 'seller_imgs'
-        allowed_extensions = {'png', 'jpg', 'jpeg'}
         new_post = Post(
             title=escape(form.title.data),
             subtitle=escape(form.subtitle.data),
             body=escape(form.body.data),
             img=escape(form.img.name),
             author=current_user,
+            category=escape(form.category.data),
             date=date.today().strftime("%B %d, %Y")
         )
         db.session.add(new_post)
@@ -172,7 +180,7 @@ def edit_post(post_id):
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
     post = Post.query.get(escape(post_id))
-    if current_user.get_id() == post.author_id:
+    if int(current_user.get_id()) == int(post.author_id):
         edit_form = PostForm(
             title=post.title,
             subtitle=post.subtitle,
@@ -208,10 +216,10 @@ def delete_post(post_id):
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
     post_to_delete = Post.query.get(escape(post_id))
-    if current_user.get_id() == post_to_delete.author_id:
+    if int(current_user.get_id()) == post_to_delete.author_id:
         db.session.delete(post_to_delete)
         db.session.commit()
-        return redirect('/')
+        return redirect("/my_page")
     else:
         return redirect("/")
 
@@ -224,15 +232,18 @@ def show_post(post_id):
     form = CommentForm()
     if form.validate_on_submit():
         if current_user.is_authenticated:
-            data = Comment(
-                text=escape(form.content.data),
-                post_id=escape(post_id),
-                author_id=int(current_user.get_id()),
-                comment_time=date.today().strftime("%B %d, %Y")
-            )
-            db.session.add(data)
-            db.session.commit()
-            return redirect(request.path)
+            if captcha.validate():
+                data = Comment(
+                    text=escape(form.content.data),
+                    post_id=escape(post_id),
+                    author_id=int(current_user.get_id()),
+                    comment_time=date.today().strftime("%B %d, %Y")
+                )
+                db.session.add(data)
+                db.session.commit()
+                return redirect(request.path)
+            else:
+                return redirect(f"/post/{escape(post_id)}")
         else:
             flash("You need to login or register")
             return redirect("/register")
@@ -241,7 +252,7 @@ def show_post(post_id):
     author = False
     if requested_post is None:
         return redirect("/404")
-    if current_user.get_id() == requested_post.author_id:
+    if (current_user.get_id()) == requested_post.author_id:
         author = True
     return render_template("post.html", post=requested_post, author=author, form=form, gravatar=gravatar)
 
@@ -252,7 +263,7 @@ def logout():
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
     logout_user()
-    return redirect('/')
+    return redirect('/login')
 
 
 @app.errorhandler(404)

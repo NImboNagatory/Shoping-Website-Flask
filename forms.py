@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm, RecaptchaField
-from wtforms import StringField, SubmitField, PasswordField, EmailField, FileField, SelectField
+from wtforms import StringField, SubmitField, PasswordField, EmailField, FileField, SelectField, IntegerField
 from wtforms.validators import DataRequired, Length, Regexp
 from flask_ckeditor import CKEditorField
 
@@ -10,6 +10,7 @@ class PostForm(FlaskForm):
     img = FileField("upload Image", validators=[DataRequired()])
     category = SelectField('Select Category:', choices=['Cpu', 'Ram', 'Motherboard', 'Power Supply', 'Case', "Gpu", 'Storage Device'])
     body = CKEditorField("Content", validators=[DataRequired()])
+    price = IntegerField("Price:", validators=[DataRequired()])
     submit = SubmitField("Submit Post")
 
 

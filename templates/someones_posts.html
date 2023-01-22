@@ -33,20 +33,12 @@
             <a href="{{url_for('p_all_posts', author_id=post.author_id)}}">{{post.author.name}}</a>
             on {{post.date}}
             {% if post.author_id | int == current_user.get_id() | int %}
-            <a href="{{url_for('delete_post', post_id=post.id) }}">✘</a>
             {%endif%}
           </p>
         </div>
         <hr>
         {% endfor %}
 
-
-        <!-- New Post -->
-
-
-          <div class="clearfix">
-            <a class="btn btn-primary float-right" href="{{url_for('add_new_post')}}">Create New Post</a>
-          </div>
       </div>
     </div>
   </div>

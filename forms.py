@@ -8,25 +8,30 @@ class PostForm(FlaskForm):
     title = StringField("Post Title", validators=[DataRequired()])
     subtitle = StringField("Subtitle", validators=[DataRequired()])
     img = FileField("upload Image", validators=[DataRequired()])
-    category = SelectField('Select Category:', choices=['Cpu', 'Ram', 'Motherboard', 'Power Supply', 'Case', "Gpu", 'Storage Device'])
+    category = SelectField('Select Category:',
+                           choices=['Cpu', 'Ram', 'Motherboard', 'Power Supply', 'Case', "Gpu", 'Storage Device'])
     body = CKEditorField("Content", validators=[DataRequired()])
     price = IntegerField("Price:", validators=[DataRequired()])
     submit = SubmitField("Submit Post")
 
 
 class RegisterForm(FlaskForm):
-    username = StringField("Username :", validators=[DataRequired()])
-    email = EmailField("Email :", validators=[DataRequired()])
-    password = PasswordField("Password :", validators=[DataRequired(), Length(min=8)])
-    rep_password = PasswordField("Repeat password :", validators=[DataRequired(), Length(min=8)])
+    username = StringField("Username :", validators=[DataRequired(), Regexp('^[\w-]+$',
+                                                                            message='Field only can contain alphanumeric characters (and _, -).')])
+    email = EmailField("Email :", validators=[DataRequired(), Regexp('^[\w-]+$',
+                                                                     message='Field only can contain alphanumeric characters (and _, -).')])
+    password = PasswordField("Password :", validators=[DataRequired(), Length(min=8), Regexp('^[\w-]+$',
+                                                                                             message='Field only can contain alphanumeric characters (and _, -).')])
+    rep_password = PasswordField("Repeat password :", validators=[DataRequired(), Length(min=8), Regexp('^[\w-]+$',
+                                                                                                        message='Field only can contain alphanumeric characters (and _, -).')])
     submit = SubmitField("Sign up")
 
 
 class LoginForm(FlaskForm):
-    email = StringField("Email :", validators=[DataRequired()])
+    email = StringField("Email :", validators=[DataRequired(), Regexp('^[\w-]+$',
+                                                                      message='Field only can contain alphanumeric characters (and _, -).')])
     password = PasswordField("Password :", validators=[DataRequired(), Length(min=8), Regexp('^[\w-]+$',
-                                                                                             message='Username can contain only alphanumeric characters (and _, -).')])
-
+                                                                                             message='Field only can contain alphanumeric characters (and _, -).')])
     submit = SubmitField("Log in")
 
 

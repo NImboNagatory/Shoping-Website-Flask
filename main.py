@@ -27,7 +27,6 @@ app.config['SESSION_TYPE'] = 'mongodb'
 Session(app)
 captcha = FlaskSessionCaptcha(app)
 
-
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///shop.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -67,14 +66,15 @@ class User(UserMixin, db.Model):
 
 class Post(db.Model):
     __tablename__ = "posts"
-    id = db.Column(db.Integer, primary_key=True)
-    author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True)
     author = relationship("User", back_populates="posts")
-    title = db.Column(db.String(250), unique=True, nullable=False)
+    title = db.Column(db.String(250), nullable=False)
     category = db.Column(db.String(250), nullable=False)
     subtitle = db.Column(db.String(250), nullable=False)
     date = db.Column(db.String(250), nullable=False)
     body = db.Column(db.Text, nullable=False)
+    price = db.Column(db.Integer, nullable=False)
     img = db.Column(db.Text, nullable=False)
 
     # ***************Parent Relationship*************#
@@ -83,12 +83,12 @@ class Post(db.Model):
 
 class Comment(db.Model):
     __tablename__ = "comments"
-    id = db.Column(db.Integer, primary_key=True)
-    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True)
     comment_author = relationship("User", back_populates="comments")
 
     # ***************Child Relationship*************#
-    post_id = db.Column(db.Integer, db.ForeignKey("posts.id"), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey("posts.id"), nullable=False, unique=True)
     parent_post = relationship("Post", back_populates="comments")
     text = db.Column(db.Text, nullable=False)
     comment_time = db.Column(db.String, nullable=False)
@@ -166,7 +166,8 @@ def add_new_post():
             img=escape(form.img.name),
             author=current_user,
             category=escape(form.category.data),
-            date=date.today().strftime("%B %d, %Y")
+            date=date.today().strftime("%B %d, %Y"),
+            price=escape(form.price.data)
         )
         db.session.add(new_post)
         db.session.commit()
@@ -201,7 +202,7 @@ def edit_post(post_id):
         return redirect("/")
 
 
-@app.route("/my_page")
+@app.route("/personal_page")
 @login_required
 def my_posts():
     if not current_user.is_authenticated:
@@ -210,43 +211,55 @@ def my_posts():
     return render_template("my_posts.html", posts=query)
 
 
+@app.route("/personal_page/<int:author_id>")
+def p_all_posts(author_id):
+    if not current_user.is_authenticated:
+        flash("Login to see the post!")
+        return redirect(url_for("login"))
+    query = db.session.execute(db.select(Post).filter_by(author_id=escape(author_id))).scalars()
+    return render_template("someones_posts.html", posts=query)
+
+
 @app.route("/delete/<int:post_id>")
 @login_required
 def delete_post(post_id):
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
     post_to_delete = Post.query.get(escape(post_id))
-    if int(current_user.get_id()) == post_to_delete.author_id:
-        db.session.delete(post_to_delete)
-        db.session.commit()
-        return redirect("/my_page")
-    else:
-        return redirect("/")
-
+    if post_to_delete is not None:
+        if int(current_user.get_id()) == post_to_delete.author_id:
+            db.session.delete(post_to_delete)
+            db.session.commit()
+            return redirect(url_for("p_all_posts"))
+        else:
+            return redirect(url_for("index"))
+    return redirect(url_for("index"))
 
 @app.route("/post/<int:post_id>", methods=["GET", "POST"])
-@login_required
 def show_post(post_id):
     if not current_user.is_authenticated:
-        return login_manager.unauthorized()
+        flash("Login to see the post")
+        return redirect(url_for("login"))
     form = CommentForm()
-    if form.validate_on_submit():
-        if current_user.is_authenticated:
-            if captcha.validate():
-                data = Comment(
-                    text=escape(form.content.data),
-                    post_id=escape(post_id),
-                    author_id=int(current_user.get_id()),
-                    comment_time=date.today().strftime("%B %d, %Y")
-                )
-                db.session.add(data)
-                db.session.commit()
-                return redirect(request.path)
+    if request.method == "POST":
+        if form.validate_on_submit():
+            if current_user.is_authenticated:
+                if captcha.validate():
+                    data = Comment(
+                        text=escape(form.content.data),
+                        post_id=escape(post_id),
+                        author_id=int(current_user.get_id()),
+                        comment_time=date.today().strftime("%B %d, %Y")
+                    )
+                    db.session.add(data)
+                    db.session.commit()
+                    return redirect(request.path)
+                else:
+                    flash("Captcha input incorrect!")
+                    return redirect(f"/post/{escape(post_id)}")
             else:
-                return redirect(f"/post/{escape(post_id)}")
-        else:
-            flash("You need to login or register")
-            return redirect("/register")
+                flash("You need to login or register")
+                return redirect("/register")
 
     requested_post = Post.query.get(escape(post_id))
     author = False
@@ -263,7 +276,7 @@ def logout():
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
     logout_user()
-    return redirect('/login')
+    return redirect(url_for("login"))
 
 
 @app.errorhandler(404)

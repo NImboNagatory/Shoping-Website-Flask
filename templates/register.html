@@ -25,12 +25,13 @@
        
        {{ wtf.quick_form(form, novalidate=True, button_map={"submit": "primary"}) }}
         {% with messages = get_flashed_messages() %}
+
   {% if messages %}
+        <a class="blockquote" href="{{url_for('login')}}">Already Registered? login</a>
     <ul class="flashes error">
     {% for message in messages %}
-      <li class="error" style="color:#f03e3e;">{{ message }}</li>
+      <li class="error" style="color:#f03e3e;list-style-type: none">{{ message }}</li>
     {% endfor %}
-      <li style="list-style-type: none;"><a class="btn btn-primary" href="/login">Log in</a></li>
     </ul>
   {% endif %}
 {% endwith %}

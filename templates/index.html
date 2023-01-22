@@ -23,14 +23,20 @@
         <div class="post-preview">
           <a href="{{ url_for('show_post', post_id=post.id) }}">
             <h2 class="post-title">
-              {{post.title}}
+              {{post.title}} -- {{post.price}} $$$
             </h2>
+            <h2 class="badge">{{post.category}}</h2>
             <h3 class="post-subtitle">
               {{post.subtitle}}
             </h3>
           </a>
           <p class="post-meta">Posted by
-            <a href="#">{{post.author.name}}</a>
+            {% if not post.author_id | int == current_user.get_id() | int %}
+            <a href="{{url_for('p_all_posts', author_id=post.author_id)}}">{{post.author.name}}</a>
+            {%endif%}
+            {% if post.author_id | int == current_user.get_id() | int %}
+            <a href="{{url_for('my_posts')}}">YOU</a>
+            {%endif%}
             on {{post.date}}
             {% if current_user.is_authenticated %}
             {% if not post.author_id | int == current_user.get_id() | int %}

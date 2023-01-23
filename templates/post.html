@@ -1,7 +1,7 @@
 {% include "header.html" %}
 
   <!-- Page Header -->
-  <header class="masthead" style="background-image: url('{{post.img_url}}')">
+  <header class="masthead" style="background-image:url({{url_for('static' ,filename='user_upload')}}/{{post.img}});">
     <div class="overlay"></div>
     <div class="container">
       <div class="row">
@@ -27,10 +27,14 @@
           <hr>
             {% if current_user.is_authenticated and post.author_id | int == current_user.get_id() | int%}
             <div class="clearfix">
-            <a class="btn btn-primary float-right" href="{{url_for('edit_post', post_id=post.id)}}">Edit Post</a>
+                <a class="btn btn-warning float-right" href="{{url_for('delete_post', post_id=post.id)}}">Delete Post</a>
+                <a class="btn btn-primary float-left" href="{{url_for('edit_post', post_id=post.id)}}">Edit Post</a>
             </div>
-            {% endif %}
 
+            {% endif %}
+            <br>
+            <br>
+            <br>
 
 
 <!--           Comments Area -->

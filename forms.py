@@ -4,6 +4,16 @@ from wtforms.validators import DataRequired, Length, Regexp, Email
 from flask_ckeditor import CKEditorField
 from wtforms.fields import EmailField
 
+
+class edit_form(FlaskForm):
+    title = StringField("Post Title", validators=[DataRequired()])
+    subtitle = StringField("Subtitle", validators=[DataRequired()])
+    img = FileField("upload Image", validators=[DataRequired()])
+    category = SelectField('Select Category:',
+                           choices=['Cpu', 'Ram', 'Motherboard', 'Power Supply', 'Case', "Gpu", 'Storage Device'])
+    body = CKEditorField("Content", validators=[DataRequired()])
+    price = IntegerField("Price:", validators=[DataRequired()])
+    submit = SubmitField("Submit Post")
 class PostForm(FlaskForm):
     title = StringField("Post Title", validators=[DataRequired()])
     subtitle = StringField("Subtitle", validators=[DataRequired()])
@@ -13,6 +23,7 @@ class PostForm(FlaskForm):
     body = CKEditorField("Content", validators=[DataRequired()])
     price = IntegerField("Price:", validators=[DataRequired()])
     submit = SubmitField("Submit Post")
+
 
 
 class RegisterForm(FlaskForm):

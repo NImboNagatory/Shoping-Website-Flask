@@ -30,10 +30,16 @@
             </h3>
           </a>
           <p class="post-meta">Posted by
+            {% if not post.author_id | int == current_user.get_id() | int %}
             <a href="{{url_for('p_all_posts', author_id=post.author_id)}}">{{post.author.name}}</a>
+            {%endif%}
+            {% if post.author_id | int == current_user.get_id() | int %}
+            <a href="{{url_for('my_posts')}}">YOU</a>
+            {%endif%}
             on {{post.date}}
             {% if post.author_id | int == current_user.get_id() | int %}
             <a href="{{url_for('delete_post', post_id=post.id) }}">✘</a>
+            <a class="btn-link" href="{{url_for('edit_post', post_id=post.id)}}">Edit post</a>
             {%endif%}
           </p>
         </div>

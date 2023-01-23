@@ -9,9 +9,10 @@ from flask_ckeditor import CKEditor
 from flask_bootstrap import Bootstrap
 from flask_gravatar import Gravatar
 from sqlalchemy.orm import relationship
-from forms import RegisterForm, PostForm, LoginForm, CommentForm
+from forms import RegisterForm, PostForm, LoginForm, CommentForm, edit_form
 from datetime import date
 from pymongo import MongoClient
+from os import path, remove
 
 db = SQLAlchemy()
 
@@ -152,6 +153,10 @@ def login():
     return render_template("login.html", form=form)
 
 
+Upload_folder = './static/user_upload'
+app.config['UPLOAD_FOLDER'] = Upload_folder
+
+
 @app.route("/new-post", methods=["GET", "POST"])
 @login_required
 def add_new_post():
@@ -159,11 +164,14 @@ def add_new_post():
         return login_manager.unauthorized()
     form = PostForm()
     if form.validate_on_submit():
+        img_data = form.img.data
+        img_path = path.join(app.config['UPLOAD_FOLDER'], img_data.filename)
+        img_data.save(img_path)
         new_post = Post(
             title=escape(form.title.data),
             subtitle=escape(form.subtitle.data),
-            body=escape(form.body.data),
-            img=escape(form.img.name),
+            body=form.body.data,
+            img=img_data.filename,
             author=current_user,
             category=escape(form.category.data),
             date=date.today().strftime("%B %d, %Y"),
@@ -175,29 +183,30 @@ def add_new_post():
     return render_template("make-post.html", form=form)
 
 
-@app.route("/edit-post/<int:post_id>")
+@app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
 @login_required
 def edit_post(post_id):
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
     post = Post.query.get(escape(post_id))
     if int(current_user.get_id()) == int(post.author_id):
-        edit_form = PostForm(
-            title=post.title,
-            subtitle=post.subtitle,
-            img_url=post.img,
-            author=post.author,
-            body=post.body
-        )
-        if edit_form.validate_on_submit():
-            post.title = escape(edit_form.title.data)
-            post.subtitle = escape(edit_form.subtitle.data)
-            post.img_url = escape(edit_form.img.data)
-            post.body = escape(edit_form.body.data)
+        E_form = edit_form()
+        if E_form.validate_on_submit():
+            remove(f"static/user_upload/{post.img}")
+            img_data = E_form.img.data
+            img_path_e = path.join(app.config['UPLOAD_FOLDER'], img_data.filename)
+            img_data.save(img_path_e)
+            post.title = escape(E_form.title.data)
+            post.subtitle = escape(E_form.subtitle.data)
+            post.img = img_data.filename
+            post.body = E_form.body.data
+            post.category = E_form.category.data
+            post.price = E_form.price.data
             db.session.commit()
+
             return redirect(url_for("show_post", post_id=post.id))
 
-        return render_template("make-post.html", form=edit_form)
+        return render_template("make-post.html", form=E_form)
     else:
         return redirect("/")
 
@@ -228,9 +237,11 @@ def delete_post(post_id):
     post_to_delete = Post.query.get(escape(post_id))
     if post_to_delete is not None:
         if int(current_user.get_id()) == post_to_delete.author_id:
+            img_path = post_to_delete.img
+            remove(f"static/user_upload/{img_path}")
             db.session.delete(post_to_delete)
             db.session.commit()
-            return redirect(url_for("p_all_posts"))
+            return redirect(url_for("p_all_posts", author_id=current_user.get_id()))
         else:
             return redirect(url_for("index"))
     return redirect(url_for("index"))
@@ -268,6 +279,7 @@ def show_post(post_id):
         return redirect("/404")
     if (current_user.get_id()) == requested_post.author_id:
         author = True
+    print(requested_post.img)
     return render_template("post.html", post=requested_post, author=author, form=form, gravatar=gravatar)
 
 

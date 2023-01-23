@@ -146,7 +146,7 @@ def login():
         user = User.query.filter_by(email=escape(form.email.data)).first()
         if user and check_password_hash(user.password, escape(form.password.data)):
             login_user(user)
-            return redirect('/')
+            return redirect(url_for("my_posts"))
         else:
             flash("incorrect      Email/Password")
     return render_template("login.html", form=form)
@@ -171,7 +171,7 @@ def add_new_post():
         )
         db.session.add(new_post)
         db.session.commit()
-        return redirect('/')
+        return redirect(url_for("index"))
     return render_template("make-post.html", form=form)
 
 
@@ -214,7 +214,7 @@ def my_posts():
 @app.route("/personal_page/<int:author_id>")
 def p_all_posts(author_id):
     if not current_user.is_authenticated:
-        flash("Login to see the post!")
+        flash("Login to see this person's posts!")
         return redirect(url_for("login"))
     query = db.session.execute(db.select(Post).filter_by(author_id=escape(author_id))).scalars()
     return render_template("someones_posts.html", posts=query)
@@ -234,6 +234,7 @@ def delete_post(post_id):
         else:
             return redirect(url_for("index"))
     return redirect(url_for("index"))
+
 
 @app.route("/post/<int:post_id>", methods=["GET", "POST"])
 def show_post(post_id):
@@ -259,7 +260,7 @@ def show_post(post_id):
                     return redirect(f"/post/{escape(post_id)}")
             else:
                 flash("You need to login or register")
-                return redirect("/register")
+                return redirect(url_for("register_user"))
 
     requested_post = Post.query.get(escape(post_id))
     author = False

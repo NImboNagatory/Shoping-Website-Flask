@@ -29,11 +29,11 @@
          {% with messages = get_flashed_messages() %}
   {% if messages %}
      <a class="blockquote" href="{{url_for("register_user")}}">Not registered? Sing Up</a>
-    <ul class="flashes error">
+
     {% for message in messages %}
-      <li class="error" style="color:#f03e3e; list-style-type: none">{{ message }}</li>
+      <p class="error" style="color:#f03e3e; list-style-type: none">{{ message }}</p>
     {% endfor %}
-    </ul>
+
   {% endif %}
 {% endwith %}
       </div>
